@@ -8,87 +8,98 @@ package model;
 import network.Peer;
 import patron.Command;
 import patron.CommandManager;
+import view.EstadoMonito;
 
 /**
  *
  * @author zippy
  */
 public class EstadoJuego {
+
     /**
-     * Acceso privado del constructor para que no se
-     * pueda isntanciar esta clase en ninguna parte mas que
-     * aqui mismo.
+     * Acceso privado del constructor para que no se pueda isntanciar esta clase
+     * en ninguna parte mas que aqui mismo.
      */
-    private EstadoJuego(){}
-    
+    private EstadoJuego() {
+    }
+
     /**
      * Regresa la isntancia del estado de juego.
-     * 
+     *
      * @return La instancia del estado de juego.
      */
-    public static EstadoJuego getInstance(){
+    public static EstadoJuego getInstance() {
         return EstadoJuegoHolder.instance;
     }
-    
+
     /**
-     * Conecta el CommandManager al servidor para obtener los datos
-     * que se ocupen. Si no se pudo realizar la conexion al servidor,
-     * este metodo regresara falso. De lo contrario, se regresara
-     * verdadero y estara hecha la conexion.
-     * 
-     * @param IP La IP del servidor.
-     * @param puerto El puerto del servidor.
-     * @return 
+     * Inicializa el peer en la direccion dada por los parametros. Tambien se
+     * conecta hacia el servidor destinatario.
+     *
+     * @param IP La IP de este peer.
+     * @param puerto El puerto de este peer.
+     * @return
      */
-    public boolean conectarServidor(String IP, int puerto){
-        return EstadoJuegoHolder.conectarServidor(IP, puerto);
+    public boolean inicializar(String IP, int puerto, String IPServer, int puertoServer) {
+        return EstadoJuegoHolder.inicializar(IP, puerto, IPServer, puertoServer);
     }
-    
+
     /**
-    * Manda un comando a todos los demas jugadores que esten 
-    * conectados en la misma red.
-    * 
-    * @param command El comando a mandarse.
-    */
-    public static void enviarComando(Command command) {
+     * Manda un comando a todos los demas jugadores que esten conectados en la
+     * misma red.
+     *
+     * @param command El comando a mandarse.
+     */
+    public void enviarComando(Command command) {
         EstadoJuegoHolder.enviarComando(command);
     }
-    
+
     /**
-     * Contiene toda la informacion relacionada a el
-     * juego y lo que va navegando atraves de la red.
-     * 
+     * Contiene toda la informacion relacionada a el juego y lo que va navegando
+     * atraves de la red.
+     *
      * El modelo del juego.
      */
-    private static class EstadoJuegoHolder{
+    private static class EstadoJuegoHolder {
+
         /**
-        * Contiene la frase a adivinar.
-        */
-       private static String frase;
+         * Contiene el turno que nos toco.
+         */
+        private static int turno;
+        /**
+         * Contiene la frase a adivinar.
+         */
+        private static String frase;
 
-       /**
-        * Contiene parte del modelo que maneja conexiones.
-        */
-       private static CommandManager manager;
+        /**
+         * Contiene el estado actual del monito.
+         */
+        private static EstadoMonito estadoMonito;
 
-       /**
-        * La instancia de este singleton.
-        */
-       private static final EstadoJuego instance = new EstadoJuego();
-       
-       /**
-        * Conecta el modelo a el servidor de entrada para recibir y mandar
-        * datos.
-        * 
-        * @param IP El IP del servidor de entrada.
-        * @param puerto El puerto del servidor de entrada.
-        */
-        public static boolean conectarServidor(String IP, int puerto){
+        /**
+         * Contiene parte del modelo que maneja conexiones.
+         */
+        private static CommandManager manager;
+
+        /**
+         * La instancia de este singleton.
+         */
+        private static final EstadoJuego instance = new EstadoJuego();
+
+        /**
+         * Inicializa el peer en la direccion dada por los parametros. Tambien
+         * se conecta hacia el servidor destinatario.
+         *
+         * @param IP La IP de este peer.
+         * @param puerto El puerto de este peer.
+         * @return
+         */
+        public static boolean inicializar(String IP, int puerto, String IPServer, int puertoServer) {
             try{
                 Peer peer = new Peer();
                 peer.inicializar(IP, puerto);
-                peer.conectarServidor(IP, puerto);
-
+                turno = peer.conectarServidor(IPServer, puertoServer);
+                
                 manager = new CommandManager(peer);
                 return true;
             }catch(Exception e){
@@ -97,17 +108,17 @@ public class EstadoJuego {
             
             return false;
         }
-        
+
         /**
-         * Manda un comando a todos los demas jugadores que esten 
-         * conectados en la misma red.
-         * 
+         * Manda un comando a todos los demas jugadores que esten conectados en
+         * la misma red.
+         *
          * @param command El comando a mandarse.
          */
         public static void enviarComando(Command command) {
-            try{
+            try {
                 manager.mandarComando(command);
-            }catch(Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
