@@ -17,6 +17,7 @@ public class ControlUI extends Context{
 
     /**
      * Contiene el estado actual del juego.
+     * 
      */
     private EstadoJuego estadoJuego;
     
