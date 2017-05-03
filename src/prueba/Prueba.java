@@ -5,10 +5,8 @@
  */
 package prueba;
 
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import model.EstadoJuego;
 import view.FrmJuego;
 
 /**
@@ -25,14 +23,7 @@ public class Prueba {
         
         SwingUtilities.invokeLater(new Runnable(){
             public void run(){
-                EstadoJuego juego = EstadoJuego.getInstance();
-                
-                if(juego.inicializar("localhost", 4999, "localhost", 6000))
-                    new FrmJuego().setVisible(true);
-                else{
-                    JOptionPane.showMessageDialog(null, "No se ha podido conectar al servidor.");
-                    System.exit(0);
-                }
+                new FrmJuego();
             }
         });
     }
