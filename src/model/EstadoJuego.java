@@ -5,12 +5,21 @@
  */
 package model;
 
+import command.Context;
+import static command.Context.setContext;
+import commands.C_IniciarJuego;
+import commands.C_MovimientoCorrecto;
+import commands.C_MovimientoIncorrecto;
+import commands.C_RegistrarTurno;
+import commands.C_TerminarJuego;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import javax.swing.JOptionPane;
 import network.Peer;
-import observer.Observable;
 import patron.Command;
 import patron.CommandManager;
 import view.EstadoMonito;
@@ -19,35 +28,17 @@ import view.EstadoMonito;
  *
  * @author zippy
  */
-public class EstadoJuego extends Observable {
+public class EstadoJuego extends Context{
 
-    /**
-     * Acceso privado del constructor para que no se pueda isntanciar esta clase
-     * en ninguna parte mas que aqui mismo.
-     */
-    private EstadoJuego() {
-
+    private EstadoJuego(){
+        
     }
-
-    /**
-     * Registra un turno dentro de la lista de turnos. Esto se usara para
-     * determinar quien sigue.
-     *
-     * @param turno El turno a registrarse.
-     */
-    public void registrarTurno(int turno) {
-        EstadoJuegoHolder.instance.registrarTurno(turno);
-    }
-
-    /**
-     * Regresa la isntancia del estado de juego.
-     *
-     * @return La instancia del estado de juego.
-     */
-    public static EstadoJuego getInstance() {
+    
+    public static EstadoJuego getInstance(){
         return EstadoJuegoHolder.instance;
     }
-
+    
+    ///METODOS DE EL ESTADO DE JUEGO
     /**
      * Inicializa el peer en la direccion dada por los parametros. Tambien se
      * conecta hacia el servidor destinatario.
@@ -59,131 +50,91 @@ public class EstadoJuego extends Observable {
     public boolean inicializar(String IP, int puerto, String IPServer, int puertoServer) {
         return EstadoJuegoHolder.instance.inicializar(IP, puerto, IPServer, puertoServer);
     }
-
+    
     /**
-     * Manda un comando a todos los demas jugadores que esten conectados en la
-     * misma red.
+     * Inicia el juego dentro del cliente. Esto se hace aqui para mandarle el
+     * comando a todos los demas jugadores que ya se inicio el juego.
      *
-     * @param command El comando a mandarse.
+     * Si mandaramos el comando Iniciar juego dentro del otro metodo, el comando
+     * se seguiria llamando indefinidamente.
      */
-    public void enviarComando(Command command) {
-        EstadoJuegoHolder.instance.enviarComando(command);
+    public void iniciarJuegoCliente() throws Exception {
+        EstadoJuegoHolder.instance.iniciarJuegoCliente();
+    }
+    
+    /**
+     * Verifica la letra que se quiere agregar.
+     * 
+     * @param letra 
+     */
+    public void verificarLetra(Character letra){
+        EstadoJuegoHolder.instance.verificarLetra(letra);
+    }
+    
+    /**
+     * Agrega un listener dedicado a escuchar por cambios en el modelo.
+     *
+     * @param listener
+     */
+    public void addModelListener(ModelListener listener) {
+        EstadoJuegoHolder.instance.addModelListener(listener);
+    }
+    
+    /**
+     * Regresa la data del modelo actual.
+     * 
+     * @return 
+     */
+    public Map<String, Object> getModelData(){
+        return EstadoJuegoHolder.instance.getModelData();
+    }
+    
+    ///METODOS DEL COMMAND
+    @Override
+    public void registrarTurno(int turno) {
+        EstadoJuegoHolder.instance.registrarTurno(turno);
     }
 
-    /**
-     * Avanza un turno hacia adelante.
-     */
+    @Override
+    public void iniciarJuego(String frase) {
+        EstadoJuegoHolder.instance.iniciarJuego(frase);
+    }
+
+    @Override
     public void avanzarTurno() {
         EstadoJuegoHolder.instance.avanzarTurno();
     }
 
-    /**
-     * Cambia la frase a adivinarse.
-     *
-     * @param frase
-     */
-    public void setFrase(String frase) {
-        EstadoJuegoHolder.instance.setFrase(frase);
+    @Override
+    public void resetearTimer() {
+        EstadoJuegoHolder.instance.resetearTimer();
     }
 
-    /**
-     * Regresa lo que se lleva adivinado de la frase.
-     *
-     * @return La frase que se lleva adivinada.
-     */
-    public String getFraseActual() {
-        return EstadoJuegoHolder.instance.getFraseActual();
+    @Override
+    public void agregarLetraIncorrecta(Character letra) {
+        EstadoJuegoHolder.instance.agregarLetraIncorrecta(letra);
     }
 
-    /**
-     * Cambia lo que se lleva adivinado de la frase.
-     *
-     * @param fraseActual
-     */
-    public void setFraseActual(String fraseActual) {
-        EstadoJuegoHolder.instance.setFraseActual(fraseActual);
+    @Override
+    public void agregarLetraCorrecta(Character letra) {
+        EstadoJuegoHolder.instance.agregarLetraCorrecta(letra);
     }
 
-    /**
-     * Regresa la frase a adivinarse.
-     *
-     * @return
-     */
-    public String getFrase() {
-        return EstadoJuegoHolder.instance.getFrase();
-    }
-
-    /**
-     * Regresa el turno actual.
-     * 
-     * @return 
-     */
-    public int getTurnoActual(){
-        return EstadoJuegoHolder.instance.getTurnoActual();
+    @Override
+    public void finalizarJuego(String ganador) {
+        EstadoJuegoHolder.instance.finalizarJuego(ganador);
     }
     
-    /**
-     * Regresa el turno que se nos asigno.
-     * @return 
-     */
-    public int getTurno(){
-        return EstadoJuegoHolder.instance.getTurno();
-    }
     
-    /**
-     * Regresa el indice del turno.
-     * @return 
-     */
-    public int getTurnoIndex(){
-        return EstadoJuegoHolder.instance.getTurnoIndex();
-    }
     
-    /**
-     * Determina si el turno ya esta registrado.
-     * 
-     * @return 
-     */
-    public boolean estaTurnoRegistrado(int turno){
-        return EstadoJuegoHolder.instance.estaTurnoRegistrado(turno);
-    }
     
-        /**
-     * Agrega una letra a la lista de letras que se han intentado adivinar.
-     *
-     * @param letra
-     */
-    public void agregarLetra(Character letra) {
-        EstadoJuegoHolder.instance.agregarLetra(letra);
-    }
-
-    /**
-     * Verifica si la letra indicada es la correcta.
-     * 
-     * @return 
-     */
-    public boolean verificarLetra(Character letra){
-        return EstadoJuegoHolder.instance.verificarLetra(letra);
-    }
     
-    /**
-     * Indica si la letra ya esta escrita.
-     * 
-     * @param letra
-     * @return 
-     */
-    public boolean letraYaEscrita(Character letra){
-        return EstadoJuegoHolder.instance.letraYaEscrita(letra);
-    }
     
-    /**
-     * Contiene toda la informacion relacionada a el juego y lo que va navegando
-     * atraves de la red.
-     *
-     * El modelo del juego.
-     */
+    
+    
+    
     private static class EstadoJuegoHolder extends EstadoJuego{
-
-        /**
+                /**
          * El numero de errores que se han cometido.
          */
         private int errores = 0;
@@ -219,9 +170,17 @@ public class EstadoJuego extends Observable {
 
         /**
          * Contiene la lista de letras que se han tratado
-         * de adivinar.
+         * de adivinar. 
+         * Aqui se indica si una letra es correcta mediante
+         * el boolean especificado.
          */
-        private List<Character> letrasAñadidas;
+        private static Map<Character, Boolean> letrasAñadidas;
+        
+        /**
+         * Contiene la lista de listeners escuchando
+         * cambios en el modelo.
+         */
+        private List<ModelListener> listeners;
         
         /**
          * Contiene la frase a adivinar.
@@ -252,18 +211,45 @@ public class EstadoJuego extends Observable {
         private CommandManager manager;
 
         /**
+         * Esto simplemente sirve para guardar todos los datos
+         * mencionados arriba, por si se quiere hacer uso de ellos
+         * en algun otro lado.
+         */
+        private static Map<String, Object> datosConcretos;
+        
+        /**
          * La instancia de este singleton.
          */
-        private static final EstadoJuegoHolder instance = new EstadoJuegoHolder();
+        private static final EstadoJuego.EstadoJuegoHolder instance = new EstadoJuego.EstadoJuegoHolder();
 
         /**
          * Constructor privado.
          */
         private EstadoJuegoHolder(){
+            listeners = new ArrayList();
+            datosConcretos = new HashMap();
             turnosRegistrados = new ArrayList();
-            letrasAñadidas = new ArrayList();
+            letrasAñadidas = new HashMap();
             
             watch = new TimeWatch();
+            inicializarDatos();
+            setContext(this);
+        }
+        
+        /**
+         * Agrega toda la informacion relevante al
+         * hashmap por si se ocupan datos.
+         */
+        private void inicializarDatos(){
+            estadoMonito = EstadoMonito.VACIO;
+            
+            datosConcretos.put("Juego Iniciado:", false);
+            datosConcretos.put("Turno Jugador:", null);
+            datosConcretos.put("Segundos:", -1);
+            datosConcretos.put("EstadoMono:", estadoMonito);
+            datosConcretos.put("FraseActual:", null);
+            datosConcretos.put("Conectados:", 0);
+            datosConcretos.put("Letras:", letrasAñadidas);
         }
         
         /**
@@ -281,8 +267,22 @@ public class EstadoJuego extends Observable {
                 peer.inicializar(IP, puerto);
                 turno = peer.conectarServidor(IPServer, puertoServer);
                 turnosRegistrados.add(turno);
-                
+               
+                /**
+                * Si nos pudimos conectar al servidor, entonces tenemos que mandarle
+                * a los que esten conectados nuestro turno.
+                */
                 manager = new CommandManager(peer);
+                
+                /**
+                 * Mandamos nuestro turno a los que esten conectados.
+                 */
+                Command registrarTurno = new C_RegistrarTurno(turno);
+                manager.mandarComando(registrarTurno);
+                
+                /**
+                 * Indicamos que si pudimos conectarnos al servidor.
+                 */
                 return true;
             } catch (Exception e) {
                 e.printStackTrace();
@@ -290,23 +290,8 @@ public class EstadoJuego extends Observable {
 
             return false;
         }
-
-        /**
-         * Manda un comando a todos los demas jugadores que esten conectados en
-         * la misma red.
-         *
-         * @param command El comando a mandarse.
-         */
-        @Override
-        public void enviarComando(Command command) {
-            try {
-                manager.mandarComando(command);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        /**
+        
+         /**
          * Avanza un turno hacia adelante.
          *
          * @return
@@ -318,7 +303,6 @@ public class EstadoJuego extends Observable {
              */
             if(estadoMonito != EstadoMonito.MUERTO){
                 turnoIndex = turnoIndex == turnosRegistrados.size() - 1 ? 0 : turnoIndex + 1;
-                System.out.println("Turno Index: " + turnoIndex);
 
                 /**
                  * Obtenemos el turno actual..
@@ -331,13 +315,15 @@ public class EstadoJuego extends Observable {
                  */
                 String nombreJugador = turno == turnoActual ? "(Te toca a ti adivinar!)" : "Jugador " + (turnoIndex+1);
 
+                System.out.println("Poniendo nombre jugador " + nombreJugador);
+                datosConcretos.put("Turno:", turno == turnoActual);
+                datosConcretos.put("Turno Jugador:", nombreJugador);
+                
                 /**
-                 * Mandamos a los observadores un boolean
-                 * si es nuestro turno o no.
+                 * Notificamos a nuestros listeners que se cambio el turno.
                  */
-                notifyObservers(turno == turnoActual);
-                notifyObservers("cambio turno:" + nombreJugador);
-
+                notifyListeners();
+                
                 /**
                  * Reiniciamos el contador a 0, ya que un nuevo turno empezo.
                  */
@@ -367,12 +353,23 @@ public class EstadoJuego extends Observable {
                                     //Esto se hace ya que si hay lag, el contador no se
                                     //va a reiniciar hasta que reciba el comando de siguiente
                                     //turno del jugador.
-                                    if(segundosRestantes < 0)
-                                        segundosRestantes = 0;
+                                    if(segundosRestantes <= 0){
+                                        //Logica de movimiento incorrecto.
+                                        segundosRestantes = 30;
+                                        
+                                        Command comando = new C_MovimientoIncorrecto(null);
+                                        manager.mandarComando(comando);
+                                        agregarError(null);
+                                        avanzarTurno();
+                                    }
 
                                     //Notificamos a el observer que avanzamos un segundo.
-                                    notifyObservers(segundosRestantes);
-
+                                    datosConcretos.put("Segundos:", segundosRestantes);
+                                    
+                                    //notifyObservers(segundosRestantes);
+                                    //Notificamos a los listener que hubo un cambio en los datos.
+                                    notifyListeners();
+                                    
                                     //Dormimos 100 millisegundos para volver a checar el tiempo
                                     //y que no se sature de instrucciones el processador.
                                     Thread.sleep(100);
@@ -385,103 +382,134 @@ public class EstadoJuego extends Observable {
                 }
             }
             else
-                notifyObservers("Mono Muerto");
+                watch.started = false;
         }
-
+        
         /**
-         * Verifica si la letra es la correcta.
+         * Registra el turno de un jugador dentro
+         * de la lista de turnos.
          * 
-         * @param letra
-         * @return 
+         * @param turno 
          */
-        public boolean verificarLetra(Character letra){
-            int currentIndex = fraseActual.length()-1;
+        @Override
+        public void registrarTurno(int turno) {
+            try{
+                /**
+                 * Determinamos si el turno que recibimos esta registrado.
+                 * En caso de que no, tenemos que registrarlo, y mandarle a
+                 * la fuente que tambien nos registre a nosotros.
+                 */
+                if(!estaTurnoRegistrado(turno)){
+                    turnosRegistrados.add(turno);
+                    Collections.sort(turnosRegistrados);
 
-            //Esto es en caso de que sea la primera letra que
-            //se trate de agregar.
-            if(currentIndex == -1)
-                currentIndex++;
-            
+                    for(Integer i : turnosRegistrados){
+                        System.out.println(i);
+                    }
+
+                    datosConcretos.put("Conectados:", turnosRegistrados.size());
+                    notifyListeners();
+
+                    /**
+                     * Enviamos un comando a todos los que esten conectados
+                     * que nuestro turno tiene que ser registrado, si es que
+                     * no lo han hecho aun.
+                     */
+                    Command registrarTurno = new C_RegistrarTurno(this.turno);
+                    manager.mandarComando(registrarTurno);
+                }
+                else
+                    System.out.println("Este turno ya esta registrado.");
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
+        
+        /**
+         * 
+         * @param letra 
+         */
+        public void verificarLetra(Character letra){
             /**
-             * Esto servira para determinar si la letra existe en
-             * la palabra que se indico.
+             * Primero checaremos si la letra no haya sido
+             * escrita. Si ya lo fue, no tenemos porque hacer
+             * algo.
+             */
+            if(!letraYaEscrita(letra)){
+                /**
+                 * Si la letra si se encontro dentro de la
+                 * frase..
+                 */
+                if(llenarFrase(letra)){
+                    //Verificamos lo que se lleva completado de la frase.
+                    verificarFrase();
+                    
+                    try{
+                        //Tenemos que mandar el comando MovimientoCorrecto
+                        //a los que esten conectados.
+                        Command correcto = new C_MovimientoCorrecto(letra);
+                        manager.mandarComando(correcto);
+                    }catch(Exception e){
+                        e.printStackTrace();
+                    }
+                    
+                    //Tenemos que reiniciar nuestro tiempo.
+                    watch.reset();
+                    
+                    //Tambien tenemos que notificar el cambio en
+                    //los que esten escuchando.
+                    datosConcretos.put("FraseActual:", fraseActual);
+                    notifyListeners();
+                }
+                /**
+                 * Si fue incorrecta la letra..
+                 */
+                else{
+                    try{
+                        Command incorrecto = new C_MovimientoIncorrecto(letra);
+                        manager.mandarComando(incorrecto);
+                        
+                        agregarError(letra);
+                        avanzarTurno();
+                    }catch(Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Llena la frase con la letra especificada, y
+         * en las posiciones determinadas.
+         * 
+         * Si no se agrego ningun caracter, se regresara
+         * falso ya que la frase no contiene ninguna de esas
+         * letras.
+         * 
+         * @param letra 
+         */
+        private boolean llenarFrase(Character letra){
+            /**
+             * Esto servira para determinar si la letra existe en la palabra que
+             * se indico.
              */
             boolean letraEncontrada = false;
-            
-            
-            for(int i = 0; i < frase.length(); i++){
-                if(frase.charAt(i) == letra){
+
+            /**
+             * Por cada caracter de la frase concreta, vamos a verificar que la
+             * letra que se indico si esta.
+             */
+            for (int i = 0; i < frase.length(); i++) {
+                if (frase.charAt(i) == letra) {
                     letraEncontrada = true;
-                    
+
                     StringBuilder builder = new StringBuilder(fraseActual);
                     builder.setCharAt(i, frase.charAt(i));
                     fraseActual = builder.toString();
                 }
             }
             
-            /**
-             * Esta variable servira para ver cuantas letras
-             * faltan.
-             */
-            int letrasFaltantes = fraseActual.length() - fraseActual.replace("_", "").length();
-            
-            if(!letraEncontrada){
-                errores++;
-                estadoMonito = EstadoMonito.getEstadoPorNumeroErrores(errores);
-                
-                notifyObservers(estadoMonito);
-            }
-            else
-                watch.reset();
-            
-            notifyObservers("FraseActual:" + fraseActual);
-            
-            if(!letraEncontrada)
-                notifyObservers("LetraAñadida:" + letra);
-            
-            if(letrasFaltantes == 0)
-                notifyObservers("Gane");
-            
             return letraEncontrada;
-        }
-        
-        /**
-         * Regresa si el turno ya esta registrado.
-         * 
-         * @return 
-         */
-        public boolean estaTurnoRegistrado(int turno){
-            for(Integer i : turnosRegistrados)
-                if(i == turno)
-                    return true;
-            
-            return false;
-        }
-        
-        /**
-         * Agrega una letra a la lista de letras que se
-         * han intentado adivinar.
-         * 
-         * @param letra 
-         */
-        public void agregarLetra(Character letra){
-            letrasAñadidas.add(letra);
-        }
-        
-        /**
-         * Registra un turno dentro de la lista de turnos registrados.
-         */
-        @Override
-        public synchronized void registrarTurno(int turno) {
-            turnosRegistrados.add(turno);
-            Collections.sort(turnosRegistrados);
-            System.out.println("El turno ha sido registrado.");
-            
-            for(Integer i : turnosRegistrados){
-                System.out.println(i);
-            }
-            
-            notifyObservers("conectado");
         }
         
         /**
@@ -489,10 +517,14 @@ public class EstadoJuego extends Observable {
          *
          * @param frase
          */
-        @Override
         public void setFrase(String frase) {
             this.frase = frase;
             
+            /**
+             * Para cada caracter, vamos a cambiarlo por "_" y
+             * agregarselo a la frase actual, que es la que indica
+             * que tanto de la frase ha sido adivinada.
+             */
             for(int i = 0; i < frase.length(); i++){
                 if(frase.charAt(i) == ' ')
                     fraseActual+= " ";
@@ -500,9 +532,126 @@ public class EstadoJuego extends Observable {
                 fraseActual+= "_";
             }
             
-            notifyObservers("iniciado:" + fraseActual);
+            /**
+             * Registramos el dato en los datos concretos,
+             * y le avisamos a los que esten escuchando por cambios
+             * que hubo una actualizacion.
+             */
+            datosConcretos.put("Frase:", frase);
+            datosConcretos.put("FraseActual:", fraseActual);
+            notifyListeners();
         }
+        
+        /**
+         * Agrega uno al contador de error y actualiza el estado del 
+         * monito.
+         */
+        public void agregarError(Character letra){
+            //Añadimos 1 al contador..
+            errores+=1;
+            
+            //Actualizamos el estado del monito..
+            estadoMonito = EstadoMonito.getEstadoPorNumeroErrores(errores);
+            datosConcretos.put("EstadoMono:", estadoMonito);
+            
+            if(letra != null){
+                //Actualizamos las letras erroneas..
+                letrasAñadidas.put(letra, false);
+                datosConcretos.put("Letras:", letrasAñadidas);
+            }
+            
+            notifyListeners();
+            
+            //Ahora verificamos si el juego ha sido perdido..
+            if(estadoMonito == EstadoMonito.MUERTO)
+                verificarJuego();
+        }
+        
+        /**
+         * Termina el juego, y verifica si se ha perdido, ademas de quien fue el ganador.
+         */
+        public void verificarJuego(){
+            try{
+                //Verificamos si la frase fue completada y nosotros fuimos el que ganamos.
+                if(!fraseActual.contains("_") && turnoActual == turno){
+                    Command terminar = new C_TerminarJuego(String.valueOf(turnoActual));
+                    manager.mandarComando(terminar);
+                    
+                    finalizarJuego(String.valueOf(turnoActual));
+                }
+                else if(turnoActual == turno && estadoMonito == EstadoMonito.MUERTO){
+                    Command terminar = new C_TerminarJuego(null);
+                    manager.mandarComando(terminar);
+                    
+                    finalizarJuego(null);
+                }
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
+        
+        /**
+         * Termina el juego, y verifica la razon por la cual se termino.
+         * @param ganador Indica si hubo un ganador. Aqui viene el turno del jugador.
+         */
+        @Override
+        public void finalizarJuego(String ganador){
+            //Si no hubo ganador, significa que el juego fue perdido
+            //o se termino prematuramente.
+            if(ganador == null)
+                JOptionPane.showMessageDialog(null, "Lastima! La palabra era " + frase + ".\nEl juego se ha perdido.");
+            else if(Integer.parseInt(ganador) == turno){
+                String jugadorGanador = "Jugador " + (turnosRegistrados.indexOf(Integer.parseInt(ganador)) + 1);
+                JOptionPane.showMessageDialog(null, jugadorGanador + " ha ganado el juego!");
+            }
+            //Por otro lado, si hay un ganador entonces verificamos
+            //quien fue el que gano.
+            else
+                JOptionPane.showMessageDialog(null, "Usted ha ganado el juego! Felicidades!");
+            
+            System.exit(0);
+        }
+        
+        /**
+        * Inicia el juego dentro del cliente.
+        * Esto se hace aqui para mandarle el comando a todos
+        * los demas jugadores que ya se inicio el juego.
+        * 
+        * Si mandaramos el comando Iniciar juego dentro del
+        * otro metodo, el comando se seguiria llamando indefinidamente.
+        */
+        @Override
+       public void iniciarJuegoCliente() throws Exception{
+           /**
+            * Generamos la frase.
+            */
+           String frase = Frases.generarFrase();
+           System.out.println("Frase escojida: " + frase);
+           
+           /**
+            * Construimos los comandos para que los 
+            * demas clientes inicien el juego con la
+            * frase que se dio, y que avanzen al primer turno.
+            */
+           Command comando = new C_IniciarJuego(frase);
 
+           manager.mandarComando(comando);
+           iniciarJuego(frase);
+       }
+                
+        /**
+         * Verifica si la frase ha sido completada.
+         * En dado caso que si, avisaremos que el juego ha sido ganado.
+         */
+        public void verificarFrase(){
+             //Esta variable servira para ver cuantas letras faltan.
+            int letrasFaltantes = fraseActual.length() - fraseActual.replace("_", "").length();
+            
+            //Verificamos si ya no hay letras faltantes.
+            if(letrasFaltantes == 0)
+                verificarJuego();
+        }
+        
         /**
          * Determina si la letra ya esta escrita.
          * 
@@ -510,70 +659,107 @@ public class EstadoJuego extends Observable {
          * @return 
          */
         public boolean letraYaEscrita(Character letra){
-            for(Character c : letrasAñadidas)
-                if(c == letra)
+            for(Map.Entry<Character, Boolean> key : letrasAñadidas.entrySet()){
+                if(key.getKey().compareTo(letra) == 0)
                     return true;
+            }
             
             return false;
         }
-        
+              
         /**
-         * Regresa lo que se lleva adivinado de la frase.
-         *
-         * @return La frase que se lleva adivinada.
+         * Agrega una letra incorrecta a la lista de letras.
+         * 
+         * @param letra 
          */
         @Override
-        public String getFraseActual() {
-            return fraseActual;
-        }
-
-        /**
-         * Cambia lo que se lleva adivinado de la frase.
-         *
-         * @param fraseActual
-         */
-        @Override
-        public void setFraseActual(String fraseActual) {
-            this.fraseActual = fraseActual;
+        public void agregarLetraCorrecta(Character letra){
+            //letrasAñadidas.put(letra, true);
+            
+            llenarFrase(letra);
+            verificarFrase();
+            datosConcretos.put("FraseActual:", fraseActual);
+            notifyListeners();
         }
         
-        /**
-         * Regresa la frase que se esta descifrando.
-         *
-         * @return
+       /**
+         * Inicia el juego y marca en los datos que se ha arrancado.
+         * 
+         * @param frase 
          */
         @Override
-        public String getFrase() {
-            return frase;
+        public void iniciarJuego(String frase){
+            setFrase(frase);
+            
+            avanzarTurno();
+            datosConcretos.put("Juego Iniciado:", true);
+            notifyListeners();
         }
-
+       
         /**
-         * Regresa el turno actual.
+         * Regresa si el turno ya esta registrado.
          * 
          * @return 
          */
-        @Override
-        public int getTurnoActual(){
-            return turnoActual;
+        public boolean estaTurnoRegistrado(int turno){
+            for(Integer i : turnosRegistrados){
+                System.out.println("    Turno: " + i);
+                if(i == turno)
+                    return true;
+            }
+            
+            return false;
         }
-        
+               
         /**
-         * Regresa el indice del turno.
+         * Agrega una letra correcta a la lista de letras.
          * 
-         * @return 
+         * @param letra 
          */
-        public int getTurnoIndex(){
-            return turnoIndex;
+        @Override
+        public void agregarLetraIncorrecta(Character letra){
+            if(letra != null){
+                letrasAñadidas.put(letra, false);
+                datosConcretos.put("Letras:", letrasAñadidas);
+                notifyListeners();
+            }
+            
+            agregarError(letra);
+        }
+        
+         /**
+         * Sirve para notificar a todos los que esten escuchando
+         * por cambios en el modelo, que hubo una actualizacion.
+         */
+        private void notifyListeners(){
+            for(ModelListener listener : listeners)
+                listener.update();
         }
         
         /**
-         * Regresa el turno que se nos asigno.
+         * Agrega un listener dedicado a escuchar por cambios
+         * en el modelo.
+         * 
+         * @param listener 
+         */
+        public void addModelListener(ModelListener listener){
+            listeners.add(listener);
+        }
+        
+        /**
+         * Regresa la data del modelo actual.
          *
          * @return
          */
-        @Override
-        public int getTurno() {
-            return turno;
+        public Map<String, Object> getModelData() {
+            return datosConcretos;
+        }
+        
+        /**
+         * Resetea el contador de segundos.
+         */
+        public void resetearTimer(){
+            watch.reset();
         }
     }
 }

@@ -3,12 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package observer;
+package model;
 
 /**
  *
  * @author zippy
  */
-public interface Observer {
-    public void update(Observable o, Object obj);
+public interface ModelListener {
+    public void update();
 }

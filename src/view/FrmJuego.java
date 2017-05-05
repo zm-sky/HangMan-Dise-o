@@ -5,23 +5,23 @@
  */
 package view;
 
-import commands.C_SiguienteTurno;
 import controller.ControlUI;
 import java.awt.Color;
+import java.awt.Component;
+import java.util.Map;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import model.EstadoJuego;
-import observer.Observable;
-import observer.Observer;
+import model.ModelListener;
 
 /**
  *
  * @author Roberto Pedraza Coello
  */
-public class FrmJuego extends JFrame implements Observer {
+public class FrmJuego extends JFrame implements ModelListener {
 
     /**
      * Contiene el control del juego.
@@ -37,7 +37,7 @@ public class FrmJuego extends JFrame implements Observer {
 
         //Inicializamos cosas basicas..
         control = new ControlUI();
-        EstadoJuego.getInstance().addObserver(this);
+        EstadoJuego.getInstance().addModelListener(this);
         
         //Conectamos al servidor para que nos de nuestro turno..
         conectar();
@@ -48,7 +48,7 @@ public class FrmJuego extends JFrame implements Observer {
      * la pantalla.
      */
     private void conectar() {
-        if (control.conectar("localhost", 5054)) {
+        if (control.conectar("localhost", 5039)) {
             setVisible(true);
         } else {
             JOptionPane.showMessageDialog(null, "No se ha podido conectar al servidor.");
@@ -57,94 +57,165 @@ public class FrmJuego extends JFrame implements Observer {
     }
 
     /**
+     * Este metodo es llamado cada vez que el modelo
+     * haya sido actualizado.
+     */
+    @Override
+    public void update(){
+        EstadoJuego model = EstadoJuego.getInstance();
+        Map<String, Object> data = model.getModelData();
+        
+        /**
+         * Checamos si el juego ha sido iniciado.
+         * Si este valor es verdadero, entonces todos los
+         * demas datos no tienen porque ser nulos ya que se 
+         * le deberian haber asignado un valor por medio del modelo.
+         */
+        if((Boolean) data.get("Juego Iniciado:")){
+            activarCampos();
+            /**
+             * Vamos a obtener todos los datos posibles de el modelo y ponerlo
+             * en variables.
+             */
+            String fraseActual = (String) data.get("FraseActual:");
+            String turnoJugador = (String) data.get("Turno Jugador:");
+            String segundosRestantes = String.valueOf(data.get("Segundos:"));
+            EstadoMonito estado = (EstadoMonito) data.get("EstadoMono:");
+
+            /**
+             * Ahora vamos a actualizar la interfaz con los datos. No todos los
+             * datos pueden haber cambiado, pero si uno fue cambiado se
+             * reflejara en la pantalla.
+             */
+            labelTiempo.setText(segundosRestantes + " segundos.");
+            /**
+             * Seteamos quien sigue.
+             */
+            jlabelTurno.setText(turnoJugador);
+            
+            /**
+             * Mostramos el panel de letras incorrectas.
+             */
+            mostrarLetras((Map<Character, Boolean>) data.get("Letras:"));
+            /**
+             * Cambiamos el color del panel dependiendo si es nuestro turno o
+             * no.
+             */
+            cambiarColorPanel(turnoJugador);
+            /**
+             * Cambiamos la imagen del monito.
+             */
+            setImagenMonito(estado);
+            /**
+             * Cambiamos lo que se lleva adivinado de la frase.
+             */
+            cambiarFraseActual(fraseActual);
+        }
+        /**
+         * Si todavia no ha sido iniciado, entonces checamos 
+         * cuanta gente hay conectada para agregarla a la tabla
+         * de personas conectadas.
+         */
+        else{
+            int conectados = (Integer) data.get("Conectados:");
+            
+            /**
+             * Checamos si tenemos que agregar un jugador a la tabla.
+             */
+            if(tablaJugadores.getRowCount() != conectados)
+                cambiarTablaJugadoresConectados();
+        }
+    }
+    
+    /**
      * Metodo update del observer.
      * 
      * @param o
      * @param obj 
      */
-    @Override
-    public void update(Observable o, Object obj) {
-        /**
-         * Usualmente solo se recibira una string si un jugador
-         * se conecto.
-         */
-        if (obj instanceof String) {
-            String mensaje = (String) obj;
-
-            if(mensaje.contains("conectado"))
-                cambiarTablaJugadoresConectados();
-            else if(mensaje.contains("LetraAñadida:"))
-                panelLetras.add(new JLabel(mensaje.substring(13)));
-            else if(mensaje.contains("iniciado:")){
-                activarCampos();
-                
-                labelPalabra.setText(mensaje.substring(9));
-            }
-            else if(mensaje.contains("FraseActual:")){
-                String frase = mensaje.substring(12);
-                String texto = "";
-                
-                for(int i = 0; i < frase.length(); i++){
-                    Character letra = frase.charAt(i);
-                    
-                    texto+= letra + " ";
-                    
-                    if(letra == ' ')
-                        texto+= "   ";
-                }
-                
-                labelPalabra.setText(texto);
-            }
-            else if(mensaje.contains("cambio turno")){
-                jlabelTurno.setText(mensaje.substring(13));
-                
-                if(mensaje.substring(13).equalsIgnoreCase("(Te toca a ti adivinar!)"))
-                    jPanel4.setBackground(new Color(255, 204, 204));
-                else
-                    jPanel4.setBackground(new Color(240, 240, 240));
-            }
-            else if(mensaje.equalsIgnoreCase("Mono muerto")){
-                control.perderJuego();
-            }
-            else if(mensaje.equalsIgnoreCase("Gane")){
-                control.ganarJuego();
-            }
-        }
-        /**
-         * Indica si se ha avanzado un segundo
-         * en el contador.
-         */
-        else if(obj instanceof Integer){
-            int segundos = (Integer) obj;
-            
-            if(segundos <= 0){
-                /**
-                 * Si es nuestro turno y se nos acabo el tiempo,
-                 * tenemos que mandar el comando que notifica a los demas que hay un nuevo turno.
-                 */
-                if(EstadoJuego.getInstance().getTurno() == EstadoJuego.getInstance().getTurnoActual()){
-                    EstadoJuego.getInstance().enviarComando(new C_SiguienteTurno());
-                    EstadoJuego.getInstance().avanzarTurno();
-                }
-            }
-            else
-                labelTiempo.setText(segundos + " segundos");
-        }
-        /**
-         * Aqui se da si se tiene que cambiar el estado del
-         * monito en el tablero.
-         */
-        else if (obj instanceof EstadoMonito) {
-            setImagenMonito((EstadoMonito) obj);
-        }
-        /**
-         * Indica si es nuestro turno de poder
-         * adivinar una letra.
-         */
-        else if(obj instanceof Boolean){
-            setActivadoEnviar((Boolean) obj);
-        }
-    }
+//    @Override
+//    public void update(Observable o, Object obj) {
+//        /**
+//         * Usualmente solo se recibira una string si un jugador
+//         * se conecto.
+//         */
+//        if (obj instanceof String) {
+//            String mensaje = (String) obj;
+//
+//            if(mensaje.contains("conectado"))
+//                cambiarTablaJugadoresConectados();
+//            else if(mensaje.contains("LetraAñadida:"))
+//                panelLetras.add(new JLabel(mensaje.substring(13)));
+//            else if(mensaje.contains("iniciado:")){
+//                activarCampos();
+//                
+//                labelPalabra.setText(mensaje.substring(9));
+//            }
+//            else if(mensaje.contains("FraseActual:")){
+//                String frase = mensaje.substring(12);
+//                String texto = "";
+//                
+//                for(int i = 0; i < frase.length(); i++){
+//                    Character letra = frase.charAt(i);
+//                    
+//                    texto+= letra + " ";
+//                    
+//                    if(letra == ' ')
+//                        texto+= "   ";
+//                }
+//                
+//                labelPalabra.setText(texto);
+//            }
+//            else if(mensaje.contains("cambio turno")){
+//                jlabelTurno.setText(mensaje.substring(13));
+//                
+//                if(mensaje.substring(13).equalsIgnoreCase("(Te toca a ti adivinar!)"))
+//                    jPanel4.setBackground(new Color(255, 204, 204));
+//                else
+//                    jPanel4.setBackground(new Color(240, 240, 240));
+//            }
+//            else if(mensaje.equalsIgnoreCase("Mono muerto")){
+//                control.perderJuego();
+//            }
+//            else if(mensaje.equalsIgnoreCase("Gane")){
+//                control.ganarJuego();
+//            }
+//        }
+//        /**
+//         * Indica si se ha avanzado un segundo
+//         * en el contador.
+//         */
+//        else if(obj instanceof Integer){
+//            int segundos = (Integer) obj;
+//            
+//            if(segundos <= 0){
+//                /**
+//                 * Si es nuestro turno y se nos acabo el tiempo,
+//                 * tenemos que mandar el comando que notifica a los demas que hay un nuevo turno.
+//                 */
+//                if(EstadoJuego.getInstance().getTurno() == EstadoJuego.getInstance().getTurnoActual()){
+//                    EstadoJuego.getInstance().enviarComando(new C_SiguienteTurno());
+//                    EstadoJuego.getInstance().avanzarTurno();
+//                }
+//            }
+//            else
+//                labelTiempo.setText(segundos + " segundos");
+//        }
+//        /**
+//         * Aqui se da si se tiene que cambiar el estado del
+//         * monito en el tablero.
+//         */
+//        else if (obj instanceof EstadoMonito) {
+//            setImagenMonito((EstadoMonito) obj);
+//        }
+//        /**
+//         * Indica si es nuestro turno de poder
+//         * adivinar una letra.
+//         */
+//        else if(obj instanceof Boolean){
+//            setActivadoEnviar((Boolean) obj);
+//        }
+//    }
 
     /**
      * Llena la tabla de jugadores.
@@ -158,6 +229,9 @@ public class FrmJuego extends JFrame implements Observer {
         botonIniciarJuego.setEnabled(true);
     }
     
+    /**
+     * Activa todos los campos.
+     */
     private void activarCampos(){
         jLabel2.setEnabled(true);
         jLabel13.setEnabled(true);
@@ -171,6 +245,82 @@ public class FrmJuego extends JFrame implements Observer {
         labelPalabra.setEnabled(true);
         
         botonIniciarJuego.setEnabled(false);
+    }
+    
+    /**
+     * Muestra las letras incorrectas en la pantalla.
+     * El metodo esta sincronizado para evitar que una letra
+     * se agrege dos veces en caso de que se haya invocado al mismo tiempo
+     * en distintos lugares.
+     * 
+     * @param letras 
+     */
+    private synchronized void mostrarLetras(Map<Character, Boolean> letras){
+        for (Map.Entry<Character, Boolean> letra : letras.entrySet()) {
+            /**
+             * Si la letra añadida no fue encontrada en la palabra,
+             * el valor es falso.
+             */
+            if (!letra.getValue() && !contieneLetra(letra.getKey())) 
+                panelLetras.add(new JLabel(String.valueOf(letra.getKey())));
+        }
+    }
+    
+    /**
+     * Verifica si la letra ya esta dentro del panel de letras incorrectas.
+     * 
+     * @param letra
+     * @return 
+     */
+    private boolean contieneLetra(Character letra){
+        for(Component c : panelLetras.getComponents()){
+            JLabel label = (JLabel) c;
+            
+            if(label.getText().equalsIgnoreCase(String.valueOf(letra)))
+                return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Muestra lo que se lleva de la frase actual
+     * en la pantalla.
+     * 
+     * @param frase 
+     */
+    private void cambiarFraseActual(String frase){
+        String texto = "";
+        
+        for (int i = 0; i < frase.length(); i++) {
+            Character letra = frase.charAt(i);
+
+            texto += letra + " ";
+
+            if (letra == ' ') {
+                texto += "   ";
+            }
+        }
+
+        labelPalabra.setText(texto);
+    }
+    
+    /**
+     * Verifica si el panel tiene que cambiar de color acorde si
+     * es el turno del jugador o no.
+     * 
+     * @param jugador 
+     */
+    private void cambiarColorPanel(String mensaje){
+        if (mensaje.equalsIgnoreCase("(Te toca a ti adivinar!)")) {
+            jPanel4.setBackground(new Color(255, 204, 204));
+            campoTextoLetra.setEnabled(true);
+            botonEnviarLetra.setEnabled(true);
+        } else {
+            jPanel4.setBackground(new Color(240, 240, 240));
+            campoTextoLetra.setEnabled(false);
+            botonEnviarLetra.setEnabled(false);
+        }
     }
     
     /**
@@ -420,7 +570,7 @@ public class FrmJuego extends JFrame implements Observer {
     }// </editor-fold>//GEN-END:initComponents
 
     private void botonIniciarJuegoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonIniciarJuegoActionPerformed
-        control.iniciarJuegoCliente();
+        control.iniciarJuego();
         activarCampos();
     }//GEN-LAST:event_botonIniciarJuegoActionPerformed
 
